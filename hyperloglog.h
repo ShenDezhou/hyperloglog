@@ -6,11 +6,11 @@
 class HyperLogLog {
   public:
     // 4 <= b <= 16
-    explicit HyperLogLog(int b) : b_(b), m_(1 << b), ms_(1 << b) {}
+    explicit HyperLogLog(int64_t b) : b_(b), m_(1ll << b), ms_(1ll << b) {}
 
-    void update(uint32_t value) {
-        int j = value & ((1 << b_) - 1);
-        uint32_t zeros = nlz5(value >> b_) - b_ + 1;
+    void update(uint64_t value) {
+        int64_t j = value & ((1ll << b_) - 1ll);
+        uint64_t zeros = nlz5(value >> b_) - b_ + 1ll;
         ms_[j] = std::max(ms_[j], zeros);
     }
 
@@ -22,17 +22,16 @@ class HyperLogLog {
             if (zeros != 0) {
                 e = m_*log((double)m_/zeros);
             }
-        } else if (e > pow(2, 32)/30.0) {
-            e = log1p(e*-1/pow(2, 32))*pow(2, 32)*-1;
+        } else if (e > pow(2ll, 32)/30.0) {
+            e = log1p(e*-1/pow(2ll, 32))*pow(2ll, 32)*-1ll;
         }
         return e;
     }
 
     double raw_estimate() const {
         double e = 0;
-
-        for (auto m : ms_) {
-            e += 1.0/(1 << m);
+        for(std::vector<uint64_t>::const_iterator iter=ms_.begin();iter!=ms_.end();++iter) {
+            e += 1.0/(1ll << *iter);
         }
         e = 1.0/e;
         e *= alpha()*m_*m_;
@@ -49,47 +48,47 @@ class HyperLogLog {
             case 64:
                 return 0.709;
             default:
-                return 0.7213/(1 + 1.079/m_);
+                return 0.7213/(1ll + 1.079/m_);
         }
     }
 
     int num_zeros() const {
         int count = 0;
-        for (auto m : ms_) {
-            if (m == 0)
+        for(std::vector<uint64_t>::const_iterator iter=ms_.begin();iter!=ms_.end();++iter) {
+            if (*iter == 0)
                 count++;
         }
         return count;
     }
 
-    std::map<int, int>* histogram() const {
-        std::map<int, int>* h = new std::map<int, int>;
+    std::map<int64_t, int64_t>* histogram() const {
+        std::map<int64_t, int64_t>* h = new std::map<int64_t, int64_t>;
 
-        for (auto m : ms_) {
-            if (h->find(m) != h->end()) {
-                h->at(m)++;
+        for(std::vector<uint64_t>::const_iterator iter=ms_.begin();iter!=ms_.end();++iter) {
+            if (h->find(*iter) != h->end()) {
+                h->at(*iter)++;
             } else {
-                (*h)[m] = 1;
+                (*h)[*iter] = 1ll;
             }
         }
 
         return h;
     }
 
-    int b() const { return b_; }
+    int64_t b() const { return b_; }
 
   private:
     // These from the book "Hacker's Delight"
-    uint32_t pop(uint32_t x) {
-        x = x - ((x >> 1) & 0x55555555);
-        x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
-        x = (x + (x >> 4)) & 0x0F0F0F0F;
+    uint64_t pop(uint64_t x) {
+        x = x - ((x >> 1) & 0x5555555555555555ll);
+        x = (x & 0x3333333333333333ll) + ((x >> 2) & 0x3333333333333333ll);
+        x = (x + (x >> 4)) & 0x0F0F0F0F0F0F0F0Fll;
         x = x + (x << 8);
         x = x + (x << 16);
         return x >> 24;
     }
 
-    uint32_t nlz5(uint32_t x) {
+    uint64_t nlz5(uint64_t x) {
         x = x | (x >> 1);
         x = x | (x >> 2);
         x = x | (x >> 4);
@@ -98,7 +97,7 @@ class HyperLogLog {
         return pop(~x);
     }
 
-    std::vector<uint32_t> ms_;
-    int b_;
-    int m_;
+    std::vector<uint64_t> ms_;
+    int64_t b_;
+    int64_t m_;
 };
